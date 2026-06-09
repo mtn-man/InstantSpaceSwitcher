@@ -287,7 +287,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   private func performSpaceSwitch(_ direction: ISSDirection) {
-    if !iss_switch(direction) {
+    let wrapAround = UserDefaults.standard.bool(forKey: "wrapAroundSpaces")
+    var info = ISSSpaceInfo()
+    let hasInfo = iss_get_space_info(&info)
+
+    var shouldWrap = false
+    var wrapTarget: UInt32 = 0
+    if hasInfo && wrapAround {
+      if direction == ISSDirectionLeft && info.currentIndex == 0 {
+        wrapTarget = info.spaceCount - 1
+        shouldWrap = true
+      } else if direction == ISSDirectionRight && info.currentIndex + 1 >= info.spaceCount {
+        wrapTarget = 0
+        shouldWrap = true
+      }
+    }
+
+    let success = shouldWrap ? iss_switch_to_index(wrapTarget) : iss_switch(direction)
+    if !success {
       NSSound.beep()
       return
     }

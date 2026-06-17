@@ -193,7 +193,9 @@ final class GeneralSettingsViewController: NSViewController {
   }
 
   @objc private func wrapAroundChanged(_ sender: NSButton) {
-    defaults.set(sender.state == .on, forKey: "wrapAroundSpaces")
+    let enabled = sender.state == .on
+    defaults.set(enabled, forKey: "wrapAroundSpaces")
+    iss_set_wrap_around(enabled)
   }
 
   @objc private func hideMenuBarIconChanged(_ sender: NSButton) {

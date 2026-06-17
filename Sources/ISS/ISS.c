@@ -67,6 +67,9 @@ static bool swipeFired = false;
 // Gesture speed state
 static double gestureSpeed = 2000.0;
 
+// Wrap-around state
+static bool wrapAroundEnabled = false;
+
 static ISSSwitchCallback switchCallback = NULL;
 
 // Predictions dictionary: DisplayID (CFStringRef) -> Index (CFNumberRef)
@@ -116,8 +119,18 @@ static void swipe_override_switch(ISSDirection dir) {
 
     unsigned int predicted;
     unsigned int current = get_prediction(info.displayID, &predicted) ? predicted : info.currentIndex;
-    unsigned int target = dir == ISSDirectionLeft ? current - 1 : current + 1;
 
+    if (wrapAroundEnabled) {
+        if (dir == ISSDirectionLeft && current == 0) {
+            iss_switch_to_index(info.spaceCount - 1);
+            return;
+        } else if (dir == ISSDirectionRight && current + 1 >= info.spaceCount) {
+            iss_switch_to_index(0);
+            return;
+        }
+    }
+
+    unsigned int target = dir == ISSDirectionLeft ? current - 1 : current + 1;
     if (iss_switch_with_info(&info, dir)) {
         set_prediction(info.displayID, target);
         if (switchCallback) { switchCallback(target); }
@@ -672,6 +685,10 @@ void iss_set_swipe_override(bool enabled) {
 
 void iss_set_gesture_speed(double speed) {
     gestureSpeed = speed;
+}
+
+void iss_set_wrap_around(bool enabled) {
+    wrapAroundEnabled = enabled;
 }
 
 void iss_reset_predictions(void) {

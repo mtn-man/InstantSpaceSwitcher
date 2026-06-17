@@ -73,6 +73,14 @@ bool iss_switch_to_index(unsigned int targetIndex);
 void iss_set_swipe_override(bool enabled);
 
 /**
+ * @brief Enables or disables wrap-around when switching past the first or last space.
+ * When enabled, swiping past the leftmost space jumps to the rightmost, and vice versa.
+ * Applies to the swipe override path.
+ * @param enabled true to wrap, false to stop at boundaries.
+ */
+void iss_set_wrap_around(bool enabled);
+
+/**
  * @brief Callback invoked after any successful space switch.
  * @param newSpaceIndex Zero-based index of the space that was switched to.
  */

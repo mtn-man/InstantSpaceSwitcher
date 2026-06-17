@@ -39,6 +39,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       iss_set_swipe_override(true)
     }
 
+    if UserDefaults.standard.bool(forKey: "wrapAroundSpaces") {
+      iss_set_wrap_around(true)
+    }
+
     let gestureSpeed = UserDefaults.standard.double(forKey: "gestureSpeed")
     if gestureSpeed > 0 {
       iss_set_gesture_speed(gestureSpeed)

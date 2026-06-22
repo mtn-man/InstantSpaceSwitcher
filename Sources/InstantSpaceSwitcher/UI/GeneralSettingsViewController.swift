@@ -198,6 +198,7 @@ final class GeneralSettingsViewController: NSViewController {
     iss_set_wrap_around(enabled)
   }
 
+
   @objc private func hideMenuBarIconChanged(_ sender: NSButton) {
     let hide = sender.state == .on
     defaults.set(hide, forKey: "hideMenuBarIcon")

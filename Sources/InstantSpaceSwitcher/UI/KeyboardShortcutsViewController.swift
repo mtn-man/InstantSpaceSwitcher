@@ -119,6 +119,18 @@ final class KeyboardShortcutsViewController: NSViewController {
       .store(in: &cancellables)
     store.$space10Hotkey.receive(on: RunLoop.main).sink { [weak self] _ in self?.loadShortcuts() }
       .store(in: &cancellables)
+    store.$space11Hotkey.receive(on: RunLoop.main).sink { [weak self] _ in self?.loadShortcuts() }
+      .store(in: &cancellables)
+    store.$space12Hotkey.receive(on: RunLoop.main).sink { [weak self] _ in self?.loadShortcuts() }
+      .store(in: &cancellables)
+    store.$space13Hotkey.receive(on: RunLoop.main).sink { [weak self] _ in self?.loadShortcuts() }
+      .store(in: &cancellables)
+    store.$space14Hotkey.receive(on: RunLoop.main).sink { [weak self] _ in self?.loadShortcuts() }
+      .store(in: &cancellables)
+    store.$space15Hotkey.receive(on: RunLoop.main).sink { [weak self] _ in self?.loadShortcuts() }
+      .store(in: &cancellables)
+    store.$space16Hotkey.receive(on: RunLoop.main).sink { [weak self] _ in self?.loadShortcuts() }
+      .store(in: &cancellables)
     store.$spaceLastSpaceHotkey.receive(on: RunLoop.main).sink { [weak self] _ in self?.loadShortcuts() }
       .store(in: &cancellables)
     store.$enabledStates.receive(on: RunLoop.main).sink { [weak self] _ in self?.loadShortcuts() }
@@ -230,6 +242,12 @@ extension KeyboardShortcutsViewController: NSTableViewDelegate {
     case .space8: defaultCombination = .defaultForSpace(8)
     case .space9: defaultCombination = .defaultForSpace(9)
     case .space10: defaultCombination = .defaultForSpace(10)
+    case .space11: defaultCombination = .defaultForSpace(11)
+    case .space12: defaultCombination = .defaultForSpace(12)
+    case .space13: defaultCombination = .defaultForSpace(13)
+    case .space14: defaultCombination = .defaultForSpace(14)
+    case .space15: defaultCombination = .defaultForSpace(15)
+    case .space16: defaultCombination = .defaultForSpace(16)
     case .lastSpace: defaultCombination = .defaultLastSpace
     }
     store.update(defaultCombination, for: identifier)
@@ -253,12 +271,14 @@ extension KeyboardShortcutsViewController: NSTableViewDelegate {
   private func handleRecordingResult(
     _ combination: HotkeyCombination, for identifier: HotkeyIdentifier
   ) {
-    let otherIdentifier: HotkeyIdentifier = identifier == .left ? .right : .left
-    if store.combination(for: otherIdentifier) == combination {
+    if let otherIdentifier = HotkeyIdentifier.allCases.first(where: {
+      $0 != identifier && store.combination(for: $0) == combination
+    }) {
       NSSound.beep()
       let alert = NSAlert()
       alert.messageText = "Shortcut already in use"
-      alert.informativeText = "This shortcut is already assigned to another action."
+      alert.informativeText =
+        "This shortcut is already assigned to \(otherIdentifier.displayName)."
       alert.alertStyle = .warning
       alert.addButton(withTitle: "OK")
       alert.runModal()

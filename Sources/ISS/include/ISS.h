@@ -50,6 +50,7 @@ bool iss_get_menubar_space_info(ISSSpaceInfo *info);
 
 /**
  * @brief Determines if a move in the given direction is allowed for the info.
+ * With wrap-around enabled (iss_set_wrap_around), moving past either end is allowed.
  * @param info Space info snapshot.
  * @param direction Desired direction to move.
  * @return true if the move is permissible.
@@ -74,8 +75,9 @@ void iss_set_swipe_override(bool enabled);
 
 /**
  * @brief Enables or disables wrap-around when switching past the first or last space.
- * When enabled, swiping past the leftmost space jumps to the rightmost, and vice versa.
- * Applies to the swipe override path.
+ * When enabled, moving past the leftmost space jumps to the rightmost, and vice versa.
+ * Applies to iss_switch (hotkeys) and the swipe override path. iss_switch_to_index
+ * still clamps out-of-range indices.
  * @param enabled true to wrap, false to stop at boundaries.
  */
 void iss_set_wrap_around(bool enabled);

@@ -137,9 +137,49 @@ static bool iss_perform_switch_gesture(ISSDirection direction, double velocity);
 static bool iss_switch_with_info(const ISSSpaceInfo *info, ISSDirection direction);
 static bool iss_should_block_switch(const ISSSpaceInfo *info, ISSDirection direction);
 
+// Index the user is effectively on: the predicted one while gestures are in flight,
+// otherwise what CGS reports.
+static unsigned int current_space_index(const ISSSpaceInfo *info) {
+    unsigned int predicted;
+    return get_prediction(info->displayID, &predicted) ? predicted : info->currentIndex;
+}
+
 static ISSDirection iss_direction_from_gesture_value(double value) {
     // Map the intercepted gesture value to the app's logical direction.
     return value > 0.0 ? ISSDirectionRight : ISSDirectionLeft;
+}
+
+/** @brief Opposite-end index when moving past the first/last space, or -1 if no wrap applies.
+ *
+ * Pure so it can be unit tested. Not declared in ISS.h.
+ */
+long iss_wrap_target(unsigned int spaceCount, unsigned int current, ISSDirection direction) {
+    if (spaceCount <= 1) {
+        return -1;
+    }
+    if (direction == ISSDirectionLeft && current == 0) {
+        return (long)spaceCount - 1;
+    }
+    if (direction == ISSDirectionRight && current + 1 >= spaceCount) {
+        return 0;
+    }
+    return -1;
+}
+
+// Wrap target for `current` (see current_space_index), if wrap-around is enabled and applies.
+static bool wrap_index_if_needed(const ISSSpaceInfo *info, unsigned int current, ISSDirection direction,
+                                 unsigned int *outTarget) {
+    if (!wrapAroundEnabled) {
+        return false;
+    }
+
+    long target = iss_wrap_target(info->spaceCount, current, direction);
+    if (target < 0) {
+        return false;
+    }
+
+    *outTarget = (unsigned int)target;
+    return true;
 }
 
 // Perform a swipe-override switch: get space info, compute target, switch,
@@ -151,17 +191,10 @@ static void swipe_override_switch(ISSDirection dir) {
         return;
     }
 
-    unsigned int predicted;
-    unsigned int current = get_prediction(info.displayID, &predicted) ? predicted : info.currentIndex;
-
-    if (wrapAroundEnabled) {
-        if (dir == ISSDirectionLeft && current == 0) {
-            iss_switch_to_index(info.spaceCount - 1);
-            return;
-        } else if (dir == ISSDirectionRight && current + 1 >= info.spaceCount) {
-            iss_switch_to_index(0);
-            return;
-        }
+    unsigned int current = current_space_index(&info);
+    unsigned int wrapTarget;
+    if (wrap_index_if_needed(&info, current, dir, &wrapTarget) && iss_switch_to_index(wrapTarget)) {
+        return;
     }
 
     unsigned int target = dir == ISSDirectionLeft ? current - 1 : current + 1;
@@ -475,8 +508,7 @@ static bool iss_should_block_switch(const ISSSpaceInfo *info, ISSDirection direc
         return true;
     }
 
-    unsigned int predicted;
-    unsigned int current = get_prediction(info->displayID, &predicted) ? predicted : info->currentIndex;
+    unsigned int current = current_space_index(info);
 
     if (direction == ISSDirectionLeft) {
         return current == 0;
@@ -486,6 +518,10 @@ static bool iss_should_block_switch(const ISSSpaceInfo *info, ISSDirection direc
 }
 
 bool iss_can_move(ISSSpaceInfo info, ISSDirection direction) {
+    unsigned int wrapTarget;
+    if (wrap_index_if_needed(&info, current_space_index(&info), direction, &wrapTarget)) {
+        return true;
+    }
     return !iss_should_block_switch(&info, direction);
 }
 
@@ -792,8 +828,12 @@ static bool iss_switch_with_info(const ISSSpaceInfo *info, ISSDirection directio
 bool iss_switch(ISSDirection direction) {
     ISSSpaceInfo info;
     if (iss_get_space_info(&info)) {
-        unsigned int predicted;
-        unsigned int current = get_prediction(info.displayID, &predicted) ? predicted : info.currentIndex;
+        unsigned int current = current_space_index(&info);
+        unsigned int wrapTarget;
+        if (wrap_index_if_needed(&info, current, direction, &wrapTarget)) {
+            return iss_switch_to_index(wrapTarget);
+        }
+
         unsigned int target = direction == ISSDirectionLeft ? current - 1 : current + 1;
 
         if (!iss_switch_with_info(&info, direction)) {
@@ -820,8 +860,7 @@ bool iss_switch_to_index(unsigned int targetIndex) {
         targetIndex = info.spaceCount - 1;
     }
 
-    unsigned int predicted;
-    unsigned int currentIndex = get_prediction(info.displayID, &predicted) ? predicted : info.currentIndex;
+    unsigned int currentIndex = current_space_index(&info);
 
     if (currentIndex == targetIndex) {
         return !outOfBounds;

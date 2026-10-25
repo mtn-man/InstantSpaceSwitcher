@@ -20,7 +20,7 @@ final class GeneralSettingsViewController: NSViewController {
   private let hideMenuBarIconCheckbox = NSButton(
     checkboxWithTitle: "Hide menu bar icon", target: nil, action: nil)
   private let wrapAroundCheckbox = NSButton(
-    checkboxWithTitle: "Wrap around when switching past left or rightmost space", target: nil, action: nil)
+    checkboxWithTitle: "Wrap around", target: nil, action: nil)
 
   private let durationPresets = [100, 200, 300, 500, 750, 1000]
   private let animationSpeedOptions = ["Normal", "Fast", "Faster", "Fastest", "Instant"]
@@ -197,7 +197,6 @@ final class GeneralSettingsViewController: NSViewController {
     defaults.set(enabled, forKey: "wrapAroundSpaces")
     iss_set_wrap_around(enabled)
   }
-
 
   @objc private func hideMenuBarIconChanged(_ sender: NSButton) {
     let hide = sender.state == .on

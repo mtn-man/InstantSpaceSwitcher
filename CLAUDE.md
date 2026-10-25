@@ -37,13 +37,13 @@ The build script compiles arm64 and x86_64 in parallel, lipo-merges them, bundle
 - **`ISS`** — Pure C library (`Sources/ISS/ISS.c`, `Sources/ISS/include/ISS.h`). Links `ApplicationServices`, `CoreFoundation`, `IOKit`. Contains all space-switching logic and the CGEvent tap. No Swift.
 - **`InstantSpaceSwitcher`** — Swift macOS app (`Sources/InstantSpaceSwitcher/`). Depends on `ISS`. No Xcode project file; uses SPM + `Info.plist` at root.
 - **`ISSCli`** — Thin C CLI wrapper (`Sources/ISSCli/main.c`). Accepts `left`, `right`, `index <n>` arguments. Bundled inside the `.app` at `Contents/MacOS/ISSCli`.
-- **`ISSTests`** — XCTest target for the C library's Exposé/Mission Control detection functions.
+- **`ISSTests`** — XCTest target for the C library's pure/testable functions: Exposé/Mission Control detection, swipe progress, wrap-around targets, and hotkey combinations.
 
 ### How switching works
 
 `ISS.c` posts three `kCGSEventDockControl` events (began/changed/ended) with `kIOHIDEventTypeDockSwipe` HID type and a velocity high enough that the animation is skipped. The key insight is using `±FLT_TRUE_MIN` as the progress value — this makes the switch instant.
 
-For keyboard hotkeys (`iss_switch`, `iss_switch_to_index`) the app calls the C library directly. For trackpad swipe override (`iss_set_swipe_override(true)`), a `CGEventTap` at `kCGHeadInsertEventTap` intercepts real dock-swipe events from the kernel (sourcePid == 0), suppresses them, and fires its own instant switch instead.
+For keyboard hotkeys (`iss_switch`, `iss_switch_to_index`) the app calls the C library directly (with wrap-around enabled, `iss_switch` jumps to the opposite end at the first/last space; see Personal modifications). For trackpad swipe override (`iss_set_swipe_override(true)`), a `CGEventTap` at `kCGHeadInsertEventTap` intercepts real dock-swipe events from the kernel (sourcePid == 0), suppresses them, and fires its own instant switch instead.
 
 Space bounds are tracked via a **predictions dictionary** (displayID → predicted index) because CGS APIs may not reflect the new space immediately after posting the gesture. `iss_reset_predictions()` is called on `activeSpaceDidChangeNotification`.
 
@@ -88,6 +88,7 @@ UI/
 | `swipeOverride` | Bool | false |
 | `gestureSpeed` | Double | 2000.0 |
 | `overlayDetectionEnabled` | Bool | true |
+| `wrapAroundSpaces` | Bool | false |
 | `hotkey.<identifier>` | JSON-encoded `HotkeyCombination` | see `HotkeyCombination` defaults |
 | `enabled.<identifier>` | Bool | true |
 
@@ -103,10 +104,11 @@ Two additions on top of upstream, not present on `main` or `feature/hide-menu-ba
 - To recover when hidden: relaunch the app (triggers `handleReopen` → opens Settings)
 - Submitted upstream as PR #73
 
-**Wrap-around spaces** — `AppDelegate`, `GeneralSettingsViewController`
+**Wrap-around spaces** — `ISS.c`, `AppDelegate`, `GeneralSettingsViewController`
 - UserDefaults key: `wrapAroundSpaces` (Bool, default false)
-- Checkbox in the System section of General settings
-- Logic lives in `AppDelegate.performSpaceSwitch(_:)` — when at the leftmost/rightmost space and wrap is enabled, calls `iss_switch_to_index` to jump to the opposite end instead of beeping
+- Checkbox in the System section of General settings; applied on launch and on toggle via `iss_set_wrap_around`
+- Logic lives in `ISS.c`: `iss_wrap_target` (pure, unit tested) is used by `iss_switch` (hotkeys) and `swipe_override_switch` (trackpad) via `wrap_index_if_needed`, which uses the predicted index. When at the leftmost/rightmost space it calls `iss_switch_to_index` to jump to the opposite end
+- `iss_switch_to_index` still clamps (direct-index hotkeys never wrap), and `ISSCli` does not wrap because it is a separate process that never sets the flag
 - Ported from upstream PR #33 (`https://github.com/jurplel/InstantSpaceSwitcher/pull/33`)
 - If upstream merges PR #33, remove this from `personal` and pull from `main`
 

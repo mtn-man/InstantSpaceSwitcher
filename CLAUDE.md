@@ -110,7 +110,6 @@ Two additions on top of upstream, not present on `main` or `feature/hide-menu-ba
 - Logic lives in `ISS.c`: `iss_wrap_target` (pure, unit tested) is used by `iss_switch` (hotkeys) and `swipe_override_switch` (trackpad) via `wrap_index_if_needed`, which uses the predicted index. When at the leftmost/rightmost space it calls `iss_switch_to_index` to jump to the opposite end
 - `iss_switch_to_index` still clamps (direct-index hotkeys never wrap), and `ISSCli` does not wrap because it is a separate process that never sets the flag
 - Ported from upstream PR #33 (`https://github.com/jurplel/InstantSpaceSwitcher/pull/33`)
-- If upstream merges PR #33, remove this from `personal` and pull from `main`
 
 ### SwiftLint
 
